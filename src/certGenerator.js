@@ -45,7 +45,7 @@ function getKeysAndCert(serialNumber) {
 }
 
 function generateRootCA(commonName) {
-    const keysAndCert = getKeysAndCert(88519609);
+    const keysAndCert = getKeysAndCert('18896');
     const keys = keysAndCert.keys;
     const cert = keysAndCert.cert;
 
