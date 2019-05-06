@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 delete require.cache['./certGenerator'];
 
@@ -39,11 +39,10 @@ function CertManager(options) {
   }
 
   const certDir = rootDirPath,
-    rootCAcrtFilePath = path.join(certDir, 'rootCA.crt'),
-    rootCAkeyFilePath = path.join(certDir, 'rootCA.key'),
+    rootCAcrtFilePath = path.join(certDir, 'falcon.crt'),
+    rootCAkeyFilePath = path.join(certDir, 'falcon.key'),
     createCertTaskMgr = new AsyncTask();
-  let cacheRootCACrtFileContent,
-    cacheRootCAKeyFileContent;
+  let cacheRootCACrtFileContent, cacheRootCAKeyFileContent;
   let rootCAExists = false;
 
   if (!fs.existsSync(certDir)) {
@@ -70,29 +69,33 @@ function CertManager(options) {
       cacheRootCAKeyFileContent = fs.readFileSync(rootCAkeyFilePath, { encoding: 'utf8' });
     }
 
-    createCertTaskMgr.addTask(hostname, (callback) => {
-      if (!fs.existsSync(keyFile) || !fs.existsSync(crtFile)) {
-        try {
-          const result = certGenerator.generateCertsForHostname(hostname, {
-            cert: cacheRootCACrtFileContent,
-            key: cacheRootCAKeyFileContent
-          });
-          fs.writeFileSync(keyFile, result.privateKey);
-          fs.writeFileSync(crtFile, result.certificate);
-          callback(null, result.privateKey, result.certificate);
-        } catch (e) {
-          callback(e);
+    createCertTaskMgr.addTask(
+      hostname,
+      (callback) => {
+        if (!fs.existsSync(keyFile) || !fs.existsSync(crtFile)) {
+          try {
+            const result = certGenerator.generateCertsForHostname(hostname, {
+              cert: cacheRootCACrtFileContent,
+              key: cacheRootCAKeyFileContent
+            });
+            fs.writeFileSync(keyFile, result.privateKey);
+            fs.writeFileSync(crtFile, result.certificate);
+            callback(null, result.privateKey, result.certificate);
+          } catch (e) {
+            callback(e);
+          }
+        } else {
+          callback(null, fs.readFileSync(keyFile), fs.readFileSync(crtFile));
         }
-      } else {
-        callback(null, fs.readFileSync(keyFile), fs.readFileSync(crtFile));
+      },
+      (err, keyContent, crtContent) => {
+        if (!err) {
+          certCallback(null, keyContent, crtContent);
+        } else {
+          certCallback(err);
+        }
       }
-    }, (err, keyContent, crtContent) => {
-      if (!err) {
-        certCallback(null, keyContent, crtContent);
-      } else {
-        certCallback(err);
-      }
-    });
+    );
   }
 
   function clearCerts(cb) {
@@ -101,7 +104,7 @@ function CertManager(options) {
   }
 
   function isRootCAFileExists() {
-    return (fs.existsSync(rootCAcrtFilePath) && fs.existsSync(rootCAkeyFilePath));
+    return fs.existsSync(rootCAcrtFilePath) && fs.existsSync(rootCAkeyFilePath);
   }
 
   function generateRootCA(config, certCallback) {
@@ -132,7 +135,7 @@ function CertManager(options) {
           fs.writeFileSync(rootCAcrtFilePath, result.certificate);
 
           console.log(color.green('rootCA generated'));
-          console.log(color.green(color.bold('PLEASE TRUST the rootCA.crt in ' + certDir)));
+          console.log(color.green(color.bold('PLEASE TRUST the falcon.crt in ' + certDir)));
 
           cb && cb(null, rootCAkeyFilePath, rootCAcrtFilePath);
         } catch (e) {
@@ -157,9 +160,10 @@ function CertManager(options) {
     if (rootCAExists) {
       return true;
     }
+    falcon.key;
 
     if (!isRootCAFileExists()) {
-      console.log(color.red('can not find rootCA.crt or rootCA.key'));
+      console.log(color.red('can not find falcon.crt or falcon.key'));
       console.log(color.red('you may generate one'));
       return false;
     } else {
@@ -172,19 +176,20 @@ function CertManager(options) {
     if (!isRootCAFileExists()) {
       callback && callback(new Error('ROOTCA_NOT_EXIST'));
     } else if (/^win/.test(process.platform)) {
-      winCertUtil.ifWinRootCATrusted()
+      winCertUtil
+        .ifWinRootCATrusted()
         .then((ifTrusted) => {
-          callback && callback(null, ifTrusted)
+          callback && callback(null, ifTrusted);
         })
         .catch((e) => {
           callback && callback(null, false);
-        })
+        });
     } else {
       const HTTPS_RESPONSE = 'HTTPS Server is ON';
       // localtest.me --> 127.0.0.1
       getCertificate(DOMAIN_TO_VERIFY_HTTPS, (e, key, cert) => {
         getPort()
-          .then(port => {
+          .then((port) => {
             if (e) {
               callback && callback(e);
               return;
@@ -228,7 +233,7 @@ function CertManager(options) {
     clearCerts,
     isRootCAFileExists,
     ifRootCATrusted,
-    getRootDirPath,
+    getRootDirPath
   };
 }
 
