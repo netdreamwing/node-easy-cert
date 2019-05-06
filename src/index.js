@@ -160,7 +160,6 @@ function CertManager(options) {
     if (rootCAExists) {
       return true;
     }
-    falcon.key;
 
     if (!isRootCAFileExists()) {
       console.log(color.red('can not find falcon.crt or falcon.key'));
